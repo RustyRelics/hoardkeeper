@@ -1,0 +1,26 @@
+{
+    "Group": "RustyRelic",
+    "Name": "hoardkeeper",
+    "Version": "0.0.1",
+    "Description": "Auto Stack & Sort Inventory to Chests",
+    "Authors": [
+        {
+            "Name": "RustyRelic",
+            "Url": "https://github.com/RustyRelics"
+        }
+    ],
+    "Website": "https://github.com/RustyRelics/Hoardkeeper",
+    "DisabledByDefault": false,
+    "IncludesAssetPack": true,
+    "Dependencies": {
+        "Hytale:AssetModule": "*"
+    },
+    "OptionalDependencies": {
+        
+    },
+    "ServerVersion": ">=0.6.0",
+    "Main": "com.rustyrelic.hytale.hoardkeeper.HoardkeeperPlugin",
+    "UpdateChecker": {
+        "CurseForge": ""
+    }
+}
