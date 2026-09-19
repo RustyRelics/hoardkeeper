@@ -1,7 +1,7 @@
 {
     "Group": "RustyRelic",
     "Name": "hoardkeeper",
-    "Version": "0.0.1",
+    "Version": "0.0.2",
     "Description": "Auto Stack & Sort Inventory to Chests",
     "Authors": [
         {

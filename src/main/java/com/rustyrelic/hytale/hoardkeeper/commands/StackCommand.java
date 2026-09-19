@@ -16,7 +16,6 @@ import com.rustyrelic.hytale.hoardkeeper.StackReport;
 import com.rustyrelic.hytale.hoardkeeper.StackRequest;
 
 import javax.annotation.Nonnull;
-import java.util.Map;
 
 /**
  * /hoardkeeper stack [--radius=N] -- runs StackEngine at the player's own position and prints the
@@ -56,29 +55,7 @@ public class StackCommand extends AbstractPlayerCommand {
         StackRequest request = new StackRequest(store, ref, world, transform.getPosition(), radius);
         StackReport report = StackEngine.run(request);
 
-        StringBuilder out = new StringBuilder();
-        out.append("Hoardkeeper: moved ").append(report.getTotalMoved()).append(" item(s)");
-        if (report.getSkippedExcludedCount() > 0) {
-            out.append(" (skipped ").append(report.getSkippedExcludedCount()).append(" excluded chest(s))");
-        }
-        out.append('\n');
-
-        for (StackReport.ChestResult chestResult : report.getChestResults()) {
-            out.append("  ").append(chestResult.position()).append(": ")
-                    .append(chestResult.movedCount()).append(" moved\n");
-        }
-
-        for (Map.Entry<String, Integer> entry : report.getChestsFull().entrySet()) {
-            out.append("  ").append(entry.getKey()).append(" x").append(entry.getValue())
-                    .append(" stayed in inventory -- chests holding it are full\n");
-        }
-
-        for (Map.Entry<String, Integer> entry : report.getNoEligibleChest().entrySet()) {
-            out.append("  ").append(entry.getKey()).append(" x").append(entry.getValue())
-                    .append(" stayed in inventory -- nothing in range holds it\n");
-        }
-
-        context.sendMessage(Message.raw(out.toString().stripTrailing()));
+        context.sendMessage(Message.raw(report.toChatMessage()));
     }
 
 }

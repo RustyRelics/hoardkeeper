@@ -1,0 +1,51 @@
+{
+  "TranslationProperties": {
+    "Name": "items.hoardstone.name"
+  },
+  "Icon": "Icons/ItemsGenerated/Rock_Marble_Brick_Ornate.png",
+  "Categories": [
+    "Blocks.Deco"
+  ],
+  "PlayerAnimationsId": "Block",
+  "ItemSoundSetId": "ISS_Blocks_Stone",
+  "Recipe": {
+    "Input": [
+      {
+        "ItemId": "Rubble_Stone",
+        "Quantity": 1
+      }
+    ],
+    "OutputQuantity": 1,
+    "TimeSeconds": 0,
+    "BenchRequirement": [
+      {
+        "Id": "Workbench",
+        "Type": "Crafting",
+        "Categories": [
+          "Workbench_Tinkering"
+        ]
+      }
+    ]
+  },
+  "BlockType": {
+    "Material": "Solid",
+    "DrawType": "Cube",
+    "Textures": [
+      {
+        "All": "BlockTextures/Rock_Marble_Brick_Ornate.png",
+        "Weight": 1
+      }
+    ],
+    "Gathering": {
+      "Breaking": {
+        "GatherType": "Rocks"
+      }
+    },
+    "BlockParticleSetId": "Stone",
+    "BlockSoundSetId": "Stone",
+    "PhysicalMaterialId": "Stone",
+    "Interactions": {
+      "Use": "RustyRelic_Hoardkeeper_Hoardstone_Use"
+    }
+  }
+}

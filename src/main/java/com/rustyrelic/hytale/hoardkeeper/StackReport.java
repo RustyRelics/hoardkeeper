@@ -56,4 +56,34 @@ public class StackReport {
         return skippedExcludedCount;
     }
 
+    /**
+     * The chat report text — the same for /hk stack and the Hoardstone, since both just print
+     * whatever StackEngine decided happened.
+     */
+    public String toChatMessage() {
+        StringBuilder out = new StringBuilder();
+        out.append("Hoardkeeper: moved ").append(totalMoved).append(" item(s)");
+        if (skippedExcludedCount > 0) {
+            out.append(" (skipped ").append(skippedExcludedCount).append(" excluded chest(s))");
+        }
+        out.append('\n');
+
+        for (ChestResult chestResult : chestResults) {
+            out.append("  ").append(chestResult.position()).append(": ")
+                    .append(chestResult.movedCount()).append(" moved\n");
+        }
+
+        for (Map.Entry<String, Integer> entry : chestsFull.entrySet()) {
+            out.append("  ").append(entry.getKey()).append(" x").append(entry.getValue())
+                    .append(" stayed in inventory -- chests holding it are full\n");
+        }
+
+        for (Map.Entry<String, Integer> entry : noEligibleChest.entrySet()) {
+            out.append("  ").append(entry.getKey()).append(" x").append(entry.getValue())
+                    .append(" stayed in inventory -- nothing in range holds it\n");
+        }
+
+        return out.toString().stripTrailing();
+    }
+
 }
