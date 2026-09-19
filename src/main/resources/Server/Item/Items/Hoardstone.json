@@ -2,7 +2,7 @@
   "TranslationProperties": {
     "Name": "items.hoardstone.name"
   },
-  "Icon": "Icons/ItemsGenerated/Rock_Marble_Brick_Ornate.png",
+  "Icon": "Icons/ItemsGenerated/RustyRelic_Hoardkeeper_Hoardstone.png",
   "Categories": [
     "Blocks.Deco"
   ],
@@ -32,7 +32,7 @@
     "DrawType": "Cube",
     "Textures": [
       {
-        "All": "BlockTextures/Rock_Marble_Brick_Ornate.png",
+        "All": "BlockTextures/RustyRelic_Hoardkeeper_Hoardstone.png",
         "Weight": 1
       }
     ],
