@@ -5,6 +5,8 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.FlagArg;
+import com.hypixel.hytale.server.core.command.system.arguments.system.OptionalArg;
+import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.windows.ContainerBlockWindow;
@@ -19,25 +21,28 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.rustyrelic.hytale.hoardkeeper.BlockPos;
 import com.rustyrelic.hytale.hoardkeeper.CandidateFinder;
 import com.rustyrelic.hytale.hoardkeeper.HoardkeeperExcluded;
+import com.rustyrelic.hytale.hoardkeeper.HoardkeeperPlugin;
+import com.rustyrelic.hytale.hoardkeeper.RadiusResolver;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * /hoardkeeper exclude [--list | --clear] -- toggles the one chest the player has open; --list and
- * --clear both work on excluded chests within range (radius 14, a constant for now -- see
- * StackCommand's default), since there is no separate stored list to read: the marker lives on each
- * chest's own block entity.
+ * /hoardkeeper exclude [--list | --clear] [--radius=N] -- toggles the one chest the player has open;
+ * --list and --clear both work on excluded chests within range, since there is no separate stored
+ * list to read: the marker lives on each chest's own block entity.
  */
 public class ExcludeCommand extends AbstractPlayerCommand {
-
-    private static final double RADIUS = 14.0;
 
     @Nonnull
     private final FlagArg listArg = withFlagArg("list", "List excluded chests within range");
     @Nonnull
     private final FlagArg clearArg = withFlagArg("clear", "Un-exclude every excluded chest within range");
+    @Nonnull
+    private final OptionalArg<Double> radiusArg = withOptionalArg(
+            "radius", "Search radius in blocks, for --list/--clear", ArgTypes.DOUBLE
+    );
 
     public ExcludeCommand(@Nonnull String name, @Nonnull String description) {
         super(name, description);
@@ -133,16 +138,24 @@ public class ExcludeCommand extends AbstractPlayerCommand {
             @Nonnull final Ref<EntityStore> ref,
             @Nonnull final World world) {
 
-        List<BlockPos> excludedNearby = findExcludedNearby(store, ref, world);
+        RadiusResolver.Result radiusResult = resolveRadius(context);
+        double radius = radiusResult.radius();
+        List<BlockPos> excludedNearby = findExcludedNearby(store, ref, world, radius);
+
+        StringBuilder out = new StringBuilder();
+        if (radiusResult.clamped()) {
+            out.append("radius capped at ").append((int) radius).append('\n');
+        }
 
         if (excludedNearby.isEmpty()) {
-            context.sendMessage(Message.raw("exclude: no excluded chests within range (radius=" + RADIUS
-                    + "). This checks chests within range, not a global list -- the marker lives in chunk data."));
+            out.append("exclude: no excluded chests within range (radius=").append((int) radius)
+                    .append("). This checks chests within range, not a global list -- the marker lives in chunk data.");
+            context.sendMessage(Message.raw(out.toString()));
             return;
         }
 
-        StringBuilder out = new StringBuilder("exclude: ").append(excludedNearby.size())
-                .append(" excluded chest(s) within range (radius=").append(RADIUS).append("):\n");
+        out.append("exclude: ").append(excludedNearby.size())
+                .append(" excluded chest(s) within range (radius=").append((int) radius).append("):\n");
         for (BlockPos pos : excludedNearby) {
             out.append("  ").append(pos).append('\n');
         }
@@ -155,6 +168,9 @@ public class ExcludeCommand extends AbstractPlayerCommand {
             @Nonnull final Ref<EntityStore> ref,
             @Nonnull final World world) {
 
+        RadiusResolver.Result radiusResult = resolveRadius(context);
+        double radius = radiusResult.radius();
+
         var transform = store.getComponent(ref, TransformComponent.getComponentType());
         if (transform == null) {
             context.sendMessage(Message.raw("exclude: could not determine your position."));
@@ -162,7 +178,7 @@ public class ExcludeCommand extends AbstractPlayerCommand {
         }
 
         Store<ChunkStore> chunkStore = world.getChunkStore().getStore();
-        List<Ref<ChunkStore>> candidates = CandidateFinder.find(chunkStore, transform.getPosition(), RADIUS);
+        List<Ref<ChunkStore>> candidates = CandidateFinder.find(chunkStore, transform.getPosition(), radius);
 
         int cleared = 0;
         for (Ref<ChunkStore> candidateRef : candidates) {
@@ -171,20 +187,26 @@ public class ExcludeCommand extends AbstractPlayerCommand {
             cleared++;
         }
 
-        context.sendMessage(Message.raw("exclude: un-excluded " + cleared + " chest(s) within range (radius=" + RADIUS + ")."));
+        StringBuilder out = new StringBuilder();
+        if (radiusResult.clamped()) {
+            out.append("radius capped at ").append((int) radius).append('\n');
+        }
+        out.append("exclude: un-excluded ").append(cleared).append(" chest(s) within range (radius=").append((int) radius).append(").");
+        context.sendMessage(Message.raw(out.toString()));
     }
 
     @Nonnull
     private List<BlockPos> findExcludedNearby(
             @Nonnull final Store<EntityStore> store,
             @Nonnull final Ref<EntityStore> ref,
-            @Nonnull final World world) {
+            @Nonnull final World world,
+            double radius) {
 
         var transform = store.getComponent(ref, TransformComponent.getComponentType());
         if (transform == null) return List.of();
 
         Store<ChunkStore> chunkStore = world.getChunkStore().getStore();
-        List<Ref<ChunkStore>> candidates = CandidateFinder.find(chunkStore, transform.getPosition(), RADIUS);
+        List<Ref<ChunkStore>> candidates = CandidateFinder.find(chunkStore, transform.getPosition(), radius);
 
         List<BlockPos> excludedNearby = new ArrayList<>();
         for (Ref<ChunkStore> candidateRef : candidates) {
@@ -193,6 +215,12 @@ public class ExcludeCommand extends AbstractPlayerCommand {
             if (pos != null) excludedNearby.add(pos);
         }
         return excludedNearby;
+    }
+
+    @Nonnull
+    private RadiusResolver.Result resolveRadius(@Nonnull CommandContext context) {
+        Double requestedRadius = radiusArg.provided(context) ? radiusArg.get(context) : null;
+        return RadiusResolver.resolve(requestedRadius, HoardkeeperPlugin.getSettings());
     }
 
 }

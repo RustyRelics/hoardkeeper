@@ -5,6 +5,7 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Int
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
+import com.hypixel.hytale.server.core.util.Config;
 import com.rustyrelic.hytale.hoardkeeper.commands.ExcludeCommand;
 import com.rustyrelic.hytale.hoardkeeper.commands.HoardkeeperCommand;
 import com.rustyrelic.hytale.hoardkeeper.commands.NearCommand;
@@ -12,12 +13,17 @@ import com.rustyrelic.hytale.hoardkeeper.commands.StackCommand;
 import com.rustyrelic.hytale.hoardkeeper.interaction.HoardstoneInteraction;
 
 import javax.annotation.Nonnull;
+import java.nio.file.Files;
 
 /**
  * Wires only: registers the HoardkeeperExcluded marker component and the /hoardkeeper command family.
  * All the actual rules live in StackEngine and HoardkeeperExcluded, not here.
  */
 public class HoardkeeperPlugin extends JavaPlugin {
+
+    // Named overload of withConfig -> mods/RustyRelic_hoardkeeper/hoardkeeper.json, not the generic
+    // "config.json" the no-name overload would give.
+    private static final String CONFIG_NAME = "hoardkeeper";
 
     /**
      * HoardkeeperExcluded's registered ComponentType. A plain mutable static, NOT a static final field
@@ -32,12 +38,42 @@ public class HoardkeeperPlugin extends JavaPlugin {
         return excludedComponentType;
     }
 
+    /**
+     * Same plain-static-field pattern as excludedComponentType above. HoardstoneInteraction is built
+     * by the codec with no constructor arguments, so there's no way to hand it the settings directly
+     * -- a static getter is the only route that reaches it. Safe from setup() onward: nothing that
+     * could call getSettings() (a command or the interaction) is even registered yet before setup()
+     * runs, and setup() itself only starts once every plugin's config has finished loading -- the
+     * engine joins every registered Config's load() future before calling any plugin's setup().
+     */
+    private static HoardkeeperSettings settings;
+
+    @Nonnull
+    public static HoardkeeperSettings getSettings() {
+        return settings;
+    }
+
+    private final Config<HoardkeeperConfig> config;
+
     public HoardkeeperPlugin(@Nonnull JavaPluginInit init) {
         super(init);
+        config = this.withConfig(CONFIG_NAME, HoardkeeperConfig.CODEC);
     }
 
     @Override
     protected void setup() {
+        // config.get() never blocks here -- see getSettings()'s comment on why loading is already
+        // finished by the time setup() runs.
+        settings = HoardkeeperSettings.validate(config.get());
+
+        // Config.load() never writes a file, even when none exists -- it just uses the codec's
+        // default in memory. So the file is written here instead, and only the first time: an
+        // operator always gets something to edit, but an existing file (maybe hand-edited) is never
+        // clobbered.
+        if (!Files.exists(getDataDirectory().resolve(CONFIG_NAME + ".json"))) {
+            config.save();
+        }
+
         // (Class, String id, BuilderCodec) overload only -- the supplier-only overload registers no
         // codec, so nothing written through it would ever be saved. Id "HoardkeeperExcluded" is frozen.
         excludedComponentType = getChunkStoreRegistry()

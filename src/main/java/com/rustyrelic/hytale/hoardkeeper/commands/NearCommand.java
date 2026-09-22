@@ -4,7 +4,7 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
-import com.hypixel.hytale.server.core.command.system.arguments.system.DefaultArg;
+import com.hypixel.hytale.server.core.command.system.arguments.system.OptionalArg;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
@@ -18,6 +18,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.rustyrelic.hytale.hoardkeeper.BlockPos;
 import com.rustyrelic.hytale.hoardkeeper.CandidateFinder;
 import com.rustyrelic.hytale.hoardkeeper.HoardkeeperExcluded;
+import com.rustyrelic.hytale.hoardkeeper.HoardkeeperPlugin;
+import com.rustyrelic.hytale.hoardkeeper.RadiusResolver;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -29,12 +31,11 @@ import java.util.List;
  */
 public class NearCommand extends AbstractPlayerCommand {
 
-    private static final double DEFAULT_RADIUS = 14.0;
     private static final int MAX_ITEM_IDS_SHOWN = 3;
 
     @Nonnull
-    private final DefaultArg<Double> radiusArg = withDefaultArg(
-            "radius", "Search radius in blocks", ArgTypes.DOUBLE, DEFAULT_RADIUS, "14"
+    private final OptionalArg<Double> radiusArg = withOptionalArg(
+            "radius", "Search radius in blocks", ArgTypes.DOUBLE
     );
 
     public NearCommand(@Nonnull String name, @Nonnull String description) {
@@ -50,7 +51,9 @@ public class NearCommand extends AbstractPlayerCommand {
             @Nonnull final PlayerRef playerRef,
             @Nonnull final World world) {
 
-        double radius = radiusArg.get(context);
+        Double requestedRadius = radiusArg.provided(context) ? radiusArg.get(context) : null;
+        RadiusResolver.Result radiusResult = RadiusResolver.resolve(requestedRadius, HoardkeeperPlugin.getSettings());
+        double radius = radiusResult.radius();
 
         var transform = store.getComponent(ref, TransformComponent.getComponentType());
         if (transform == null) {
@@ -61,7 +64,11 @@ public class NearCommand extends AbstractPlayerCommand {
         Store<ChunkStore> chunkStore = world.getChunkStore().getStore();
         List<Ref<ChunkStore>> candidates = CandidateFinder.find(chunkStore, transform.getPosition(), radius);
 
-        StringBuilder out = new StringBuilder("near: radius=").append(radius)
+        StringBuilder out = new StringBuilder();
+        if (radiusResult.clamped()) {
+            out.append("radius capped at ").append((int) radius).append('\n');
+        }
+        out.append("near: radius=").append(radius)
                 .append(" found=").append(candidates.size()).append('\n');
 
         int shown = 0;
