@@ -12,3 +12,6 @@ run/
 .vscode
 INVESTIGATION-PERSISTENCE.md
 NOTES.md
+
+# runServer (dev mode) writes the live config here instead of mods/ — never commit it
+src/main/resources/hoardkeeper.json

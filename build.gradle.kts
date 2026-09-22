@@ -46,6 +46,12 @@ tasks.named<Jar>("jar") {
     archiveVersion.set(project.property("version").toString())
 }
 
+// runServer (dev mode) writes the live config into src/main/resources/hoardkeeper.json instead of
+// mods/ — never let it ship in the jar even if it's sitting there uncommitted.
+tasks.named<Copy>("processResources") {
+    exclude("hoardkeeper.json")
+}
+
 // Uncomment if you are using IntelliJ.
 // idea {
 //     module {
